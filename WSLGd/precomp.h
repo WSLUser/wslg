@@ -27,7 +27,7 @@
 #include <vector>
 #include <map>
 #include <vector>
-#include "config.h"
+//#include "config.h"
 #include "lxwil.h"
 #if HAVE_WINPR
 #include "winpr/ini.h"

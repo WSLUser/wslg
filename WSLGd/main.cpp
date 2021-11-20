@@ -5,7 +5,7 @@
 #include "ProcessMonitor.h"
 
 #define CONFIG_FILE ".wslgconfig"
-#define SHARE_PATH "/mnt/wslg"
+#define SHARE_PATH "/mnt/wsl"
 #define MSRDC_EXE "msrdc.exe"
 
 constexpr auto c_serviceIdTemplate = "%08X-FACB-11E6-BD58-64006A7986D3";
