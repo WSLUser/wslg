@@ -6,7 +6,7 @@
 #include "FontMonitor.h"
 
 #define CONFIG_FILE ".wslgconfig"
-#define SHARE_PATH "/mnt/wslg"
+#define SHARE_PATH "/mnt/wsl"
 #define MSRDC_EXE "msrdc.exe"
 #define GDBSERVER_PATH "/usr/bin/gdbserver"
 #define WESTON_NOTIFY_SOCKET SHARE_PATH "/weston-notify.sock"
@@ -375,6 +375,7 @@ try {
 
     // Setup notify for wslgd-notify.so
     wil::unique_fd notifyFd(SetupReadyNotify(WESTON_NOTIFY_SOCKET));
+    THROW_LAST_ERROR_IF(chown(WESTON_NOTIFY_SOCKET, passwordEntry->pw_uid, passwordEntry->pw_gid) < 0);
     THROW_LAST_ERROR_IF(!notifyFd);
 
     // Construct weston option string.
