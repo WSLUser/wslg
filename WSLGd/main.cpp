@@ -6,6 +6,7 @@
 #include "FontMonitor.h"
 
 #define CONFIG_FILE ".wslgconfig"
+#define SHARE_PATH "/mnt/wsl"
 #define MSRDC_EXE "msrdc.exe"
 #define GDBSERVER_PATH "/usr/bin/gdbserver"
 #define WESTON_NOTIFY_SOCKET SHARE_PATH "/weston-notify.sock"
@@ -298,6 +299,7 @@ try {
         {"PULSE_SERVER", SHARE_PATH "/PulseServer", false},
         {"PULSE_AUDIO_RDP_SINK", SHARE_PATH "/PulseAudioRDPSink", false},
         {"PULSE_AUDIO_RDP_SOURCE", SHARE_PATH "/PulseAudioRDPSource", false},
+        {"USE_VSOCK", socketFdString.c_str(), true},
         {"WSL2_DEFAULT_APP_ICON", DEFAULT_ICON_PATH "/wsl/linux.png", false},
         {"WSL2_DEFAULT_APP_OVERLAY_ICON", DEFAULT_ICON_PATH "/wsl/linux.png", false},
     };
@@ -377,6 +379,7 @@ try {
 
     // Setup notify for wslgd-notify.so
     wil::unique_fd notifyFd(SetupReadyNotify(WESTON_NOTIFY_SOCKET));
+    THROW_LAST_ERROR_IF(chown(WESTON_NOTIFY_SOCKET, passwordEntry->pw_uid, passwordEntry->pw_gid) < 0);
     THROW_LAST_ERROR_IF(!notifyFd);
 
     // Construct weston option string.
@@ -438,7 +441,7 @@ try {
     bool isUseMstsc = GetEnvBool("WSLG_USE_MSTSC", false);
     if (!isUseMstsc && !wslExecutionAliasPath.empty()) {
         std::filesystem::path msrdcExePath = TranslateWindowsPath(wslExecutionAliasPath.c_str());
-        msrdcExePath /= MSRDC_EXE;
+        msrdcExePath += "/" MSRDC_EXE;
         if (access(msrdcExePath.c_str(), X_OK) == 0) {
             rdpClientExePath = std::move(msrdcExePath);
         }
@@ -459,11 +462,11 @@ try {
     auto rdpFile = getenv(c_rdpFileOverrideEnv);
     if (rdpFile) {
         if (strstr(rdpFile, "..\\") || strstr(rdpFile, "../")) {
-            LOG_ERROR("RDP file must not contain relative path (%s)", rdpFile);
+            LOG_ERROR("RDP file must be placed under WSL install and not be a relative path (%s)", rdpFile);
             rdpFile = nullptr;
         }
     }
-    rdpFilePathArg += "\\"; // Windows-style path
+    rdpFilePathArg += "\\" or "/"; // Windows and Linux style path
     if (rdpFile) {
         rdpFilePathArg += rdpFile;
     } else {
