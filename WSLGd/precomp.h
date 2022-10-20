@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <linux/vm_sockets.h>
+#include <array>
 #include <filesystem>
 #include <array>
 #include <map>

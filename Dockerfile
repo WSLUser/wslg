@@ -77,6 +77,7 @@ RUN echo "== Install Core dependencies ==" && \
         polkit-devel  \
         python3-devel \
         python3-mako  \
+        python3-markupsafe \
         sed \
         sqlite-devel \
         systemd-devel  \
