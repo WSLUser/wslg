@@ -315,6 +315,10 @@ try {
     limit.rlim_cur = RLIM_INFINITY;
     limit.rlim_max = RLIM_INFINITY;
     THROW_LAST_ERROR_IF(setrlimit(RLIMIT_CORE, &limit) < 0);
+    
+    THROW_LAST_ERROR_IF(getrlimit(RLIMIT_NOFILE, &limit) < 0);
+    limit.rlim_cur = limit.rlim_max;
+    THROW_LAST_ERROR_IF(setrlimit(RLIMIT_NOFILE, &limit) < 0);
 
     // create folder to store core files.
     std::filesystem::create_directories(c_coreDir);
