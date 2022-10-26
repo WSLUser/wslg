@@ -92,60 +92,29 @@ int wslgd::ProcessMonitor::LaunchProcess(
 }
 
 int wslgd::ProcessMonitor::Run() try {
-    // Configure a signalfd to track when child processes exit.
-    sigset_t SignalMask;
-    sigemptyset(&SignalMask);
-    sigaddset(&SignalMask, SIGCHLD);
-    THROW_LAST_ERROR_IF(sigprocmask(SIG_BLOCK, &SignalMask, nullptr) < 0);
-
-    wil::unique_fd signalFd{signalfd(-1, &SignalMask, SFD_CLOEXEC)};
-    THROW_LAST_ERROR_IF(!signalFd);
-
-    std::map<std::string, std::vector<time_t>> crashes;
-
-    // Begin monitoring loop.
-    pollfd pollFd{signalFd.get(), POLLIN};
     for (;;) {
-        if (poll(&pollFd, 1, -1) <= 0) {
-            break;
-        }
+        // Reap any zombie child processes and re-launch any tracked processes.
+        int pid;
+        int status;
 
-        if (pollFd.revents & POLLIN) {
-            signalfd_siginfo signalInfo;
-            auto bytesRead = TEMP_FAILURE_RETRY(read(pollFd.fd, &signalInfo, sizeof(signalInfo)));
-            THROW_INVALID_IF(bytesRead != sizeof(signalInfo));
-            THROW_INVALID_IF(signalInfo.ssi_signo != SIGCHLD);
+        /* monitor only processes within same group as caller */
+        THROW_LAST_ERROR_IF((pid = waitpid(0, &status, 0)) <= 0);
 
-            // Reap any zombie child processes and re-launch any tracked processes.
-            for (;;) {
-                int pid;
-                int status;
-                THROW_LAST_ERROR_IF((pid = waitpid(-1, &status, WNOHANG)) < 0);
-
-                if (pid == 0) {
-                    break;
+        auto found = m_children.find(pid);
+        if (found != m_children.end()) {
+            if (!found->second.argv.empty()) {
+                std::string cmd;
+                for (auto &arg : found->second.argv) {
+                    cmd += arg.c_str();
+                    cmd += " ";
                 }
-
-                auto found = m_children.find(pid);
-                if (found != m_children.end()) {
-
-                    if (!found->second.argv.empty()) {
-                        std::string cmd;
-                        for (const auto& e: found->second.argv) {
-                            if (!cmd.empty()) {
-                                cmd += ' ';
-                            }
-
-                            cmd += e;
+                if (WIFEXITED(status)) {
+                    LOG_INFO("pid %d exited with status %d, %s", pid, WEXITSTATUS(status), cmd.c_str());
+                    
+                } else if (WIFSIGNALED(status)) {
+                    LOG_INFO("pid %d terminated with signal %d, %s", pid, WTERMSIG(status), cmd.c_str());
                         }
-
-                        if (WIFEXITED(status)) {
-                            LOG_INFO("%s exited with status %d.", cmd.c_str(), WEXITSTATUS(status));
-
-                        } else if (WIFSIGNALED(status)) {
-                            LOG_INFO("%s terminated with signal %d.", cmd.c_str(), WTERMSIG(status));
-                        }
-
+                
                         auto& crashTimestamps = crashes[cmd];
                         auto now = time(nullptr);
                         crashTimestamps.erase(std::remove_if(crashTimestamps.begin(), crashTimestamps.end(), [&](auto ts) { return ts < now - 60; }), crashTimestamps.end());
