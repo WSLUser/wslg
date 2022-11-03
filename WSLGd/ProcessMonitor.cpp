@@ -123,7 +123,7 @@ int wslgd::ProcessMonitor::Run() try {
                         if (crashTimestamps.size() > 10) {
                             LOG_INFO("%s exited more than 10 times in 60 seconds, not starting it again", cmd.c_str());
                         } else {
-                            LaunchProcess(std::move(found->second.argv), std::move(found->second.capabilities));
+                            LaunchProcess(std::move(found->second.argv), std::move(found->second.capabilities), std::move(found->second.env));
                         }
                     }
 
